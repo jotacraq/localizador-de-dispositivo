@@ -58,18 +58,24 @@ def verificar_internet():
         return 0
 
 def pegar_localizacao():
-    locator = Geolocator()
-    locator.desired_accuracy = PositionAccuracy.HIGH
+    try:
+        locator = Geolocator()
+        locator.desired_accuracy = PositionAccuracy.HIGH
 
-    pos = locator.get_geoposition_async().get()
+        pos = locator.get_geoposition_async().get()
 
-    coord = pos.coordinate
-    ponto = coord.point.position
+        coord = pos.coordinate
+        ponto = coord.point.position
 
-    latitude = ponto.latitude
-    longitude = ponto.longitude
+        latitude = ponto.latitude
+        longitude = ponto.longitude
     
-    return latitude, longitude
+        return latitude, longitude
+    except Exception as e:
+        print(f"⚠ Aviso: Não foi possível obter localização. Detalhes: {str(e)}")
+        latitude = "NULL"
+        longitude = "NULL"
+        return latitude, longitude
 
 def montar_json_completo():
     data_hora = pegar_data_hora()
@@ -77,13 +83,7 @@ def montar_json_completo():
     ippublico = pegar_ip_publico()
     ssid = pegar_ssid()
     tem_internet = verificar_internet()
-    
-    try:
-        latitude, longitude = pegar_localizacao()
-    except Exception as e:
-        print(f"⚠ Aviso: Não foi possível obter localização. Detalhes: {str(e)}")
-        latitude = "NULL"
-        longitude = "NULL"
+    latitude, longitude = pegar_localizacao()
     
     dados = {
         "data_hora": data_hora,
