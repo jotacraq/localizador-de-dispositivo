@@ -13,6 +13,45 @@ def pegar_data_hora():
     return data_hora_atual.strftime('%Y-%m-%d %H:%M:%S')
 
 
+def pegar_nome_host():
+    try:
+        nome_host = socket.gethostname()
+        return nome_host
+    except Exception as e:
+        print(f"⚠ Aviso: Não foi possível obter o nome do host. Detalhes: {str(e)}")
+        return "NULL"
+
+
+def pegar_uuid_hardware():
+    try:
+        comando = [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            "(Get-CimInstance Win32_ComputerSystemProduct).UUID"
+        ]
+
+        resultado = subprocess.check_output(
+            comando,
+            text=True,
+            stderr=subprocess.DEVNULL
+        ).strip()
+
+        if not resultado:
+            return "UUID_NAO_ENCONTRADO"
+
+        if resultado.upper() in (
+            "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF",
+            "00000000-0000-0000-0000-000000000000"
+        ):
+            return "UUID_INVALIDO"
+
+        return resultado
+
+    except Exception:
+        return "UUID_ERRO"
+
+
 def pegar_ssid():
     try:
         resultado = subprocess.run(['netsh', 'wlan', 'show', 'interface'], 
@@ -57,7 +96,9 @@ def verificar_internet():
     except Exception:
         return 0
 
+
 def pegar_localizacao():
+    """Obtém localização geográfica do dispositivo"""
     try:
         locator = Geolocator()
         locator.desired_accuracy = PositionAccuracy.HIGH
@@ -77,16 +118,21 @@ def pegar_localizacao():
         longitude = "NULL"
         return latitude, longitude
 
+
 def montar_json_completo():
     data_hora = pegar_data_hora()
+    uuid_hardware = pegar_uuid_hardware()
     iplocal = pegar_ip_local()
     ippublico = pegar_ip_publico()
     ssid = pegar_ssid()
     tem_internet = verificar_internet()
     latitude, longitude = pegar_localizacao()
+    nome_host = pegar_nome_host()
     
     dados = {
         "data_hora": data_hora,
+        "uuid_hardware": uuid_hardware,
+        "nome_host": nome_host,
         "ip_local": iplocal,
         "ip_publico": ippublico,
         "ssid": ssid,
@@ -99,6 +145,13 @@ def montar_json_completo():
 
 
 if __name__ == "__main__":
-    dados = montar_json_completo()
-    print(json.dumps(dados, indent=2, ensure_ascii=False))
+    
+    if verificar_internet() == 0:
+        print("⚠ Aviso: Sem conexão com a internet. Alguns dados podem estar ausentes.")
+    elif verificar_internet() == 1:
+        print("✔ Conexão com a internet estabelecida.")
+        dados = montar_json_completo()
+        print(json.dumps(dados, indent=4, ensure_ascii=False))
+        
+    
     
